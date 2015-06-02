@@ -25,6 +25,19 @@ def get_toplevel_key(key, outpath):
     with open(outpath, "w") as f:
         pickle.dump(values, f)
 
+def get_toplevel_array_values(key, outpath):
+    """ Like the other one, but works for array valued keys """
+    with open("yelp_academic_dataset_business.json") as f:
+        values = []
+        for line in f:
+            data = json.loads(line)
+            for item in data[key]:
+                if item not in values:
+                    values.append(item)
+
+    with open(outpath, "w") as f:
+        pickle.dump(values, f)
+
 def get_good_for(outpath):
     with open("yelp_academic_dataset_business.json") as f:
         amb = []
@@ -66,4 +79,4 @@ def get_all_attributes_and_values(outpath):
     with open(outpath, "w") as f:
         pickle.dump(values, f)
 
-get_all_attributes_and_values("attributes")
+print get_toplevel_array_values("categories", "categories")
