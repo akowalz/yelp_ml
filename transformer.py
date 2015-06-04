@@ -8,24 +8,43 @@ class Transformer:
 		self.attributes = attributes
 		self.encoders = self.build_encoders()
 
-	def encode_boolean(self, value):
+	def encode_boolean(self, value, attribute_name=None):
+		if value is None:
+			attr = self.get_attribute_info(attribute_name)
+			if 'default' in attr:
+				value = attr['default']
+			else:
+				return -1
 		return int(value)
 
 	def encode_string(self, attribute_name, value):
+		if value is None:
+			attr = self.get_attribute_info(attribute_name)
+			if 'default' in attr:
+				value = attr['default']
+			else:
+				return -1
 		encoder = self.encoders[attribute_name]
 		return encoder.transform([value])[0]
 
 	def encode_dict(self, attribute_name, value_dict):
 		output = []
-		attr_values = self.get_attribute_values(attribute_name)
-		for value in attr_values:
-			if value in value_dict:
-				encoding = self.encode_boolean(value_dict[value])	
-			else:
-				encoding = 0
-			output.append(encoding)	
 
-		return output
+		attr = self.get_attribute_info(attribute_name)
+		attr_values = self.get_attribute_values(attribute_name)
+
+		if value_dict is None:
+			return [0] * len(attr_values)
+		else:
+			for value in attr_values:
+				if value in value_dict:
+					encoding = self.encode_boolean(value_dict[value],
+							attribute_name)
+				else:
+					encoding = 0
+				output.append(encoding)
+
+			return output
 
 	def build_encoders(self):
 		encoders = {}
@@ -34,7 +53,6 @@ class Transformer:
 				le = LabelEncoder()
 				le.fit(attr['values'])
 				encoders[attr['name']] = le
-	
 		return encoders
 
 	def encode_attribute(self, attr, attr_value):
@@ -42,9 +60,20 @@ class Transformer:
 		if attr_type == "string":
 			return self.encode_string(attr, attr_value)
 		elif attr_type == "bool":
-			return self.encode_boolean(attr_value)
+			return self.encode_boolean(attr_value, attr)
 		elif attr_type == "dict":
 			return self.encode_dict(attr, attr_value)
+
+	def get_attribute_type(self, attr_name):
+		return self.get_attribute_info(attr_name)['type']
+
+	def get_attribute_values(self, attr_name):
+		return self.get_attribute_info(attr_name)['values']
+
+	def get_attribute_info(self, attr_name):
+		for attr in self.attributes:
+			if attr_name == attr['name']:
+				return attr
 
 	def transform_instance(self, instance):
 		attribute_dict = instance['attributes']
@@ -52,24 +81,15 @@ class Transformer:
 		for attr in self.attributes:
 			if attr['name'] in attribute_dict.keys():
 				value = attribute_dict[attr['name']]
-				name = attr['name']
-				encoding = self.encode_attribute(name, value)
-				if isinstance(encoding, list):
-					encoded_instance += encoding
-				else:
-					encoded_instance.append(encoding)
 			else:
-				encoded_instance.append(-1)
+				value = None
 
-		return (encoded_instance, instance["stars"])
+			name = attr['name']
+			encoding = self.encode_attribute(name, value)
 
-	def get_attribute_type(self, attr_name):
-		for attr in self.attributes:
-			if attr_name == attr['name']:
-				return attr['type']
+			if isinstance(encoding, list):
+				encoded_instance += encoding
+			else:
+				encoded_instance.append(encoding)
 
-	def get_attribute_values(self, attr_name):
-		for attr in self.attributes:
-			if attr_name == attr['name']:
-				return attr['values']
-
+		return (encoded_instance, instance["stars"], instance["review_count"])
