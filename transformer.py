@@ -76,6 +76,8 @@ class Transformer:
 			return self.encode_boolean(attr_value, attr)
 		elif attr_type == "dict":
 			return self.encode_dict(attr, attr_value)
+		elif attr_type = "list":
+			return attr_value
 
 	def get_attribute_type(self, attr_name):
 		return self.get_attribute_info(attr_name)['type']
