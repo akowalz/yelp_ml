@@ -8,7 +8,21 @@ class Transformer:
 		self.attributes = attributes
 		self.encoders = self.build_encoders()
 
+	def build_encoders(self):
+		"""
+		Creates Label encoders based on possible values and keeps them in array
+		to use for later encoding
+		"""
+		encoders = {}
+		for attr in self.attributes:
+			if attr['type'] == 'string':
+				le = LabelEncoder()
+				le.fit(attr['values'])
+				encoders[attr['name']] = le
+		return encoders
+
 	def encode_boolean(self, value, attribute_name=None):
+		""" turns True of False into 0 or 1, or default value if given """
 		if value is None:
 			attr = self.get_attribute_info(attribute_name)
 			if 'default' in attr:
@@ -18,6 +32,10 @@ class Transformer:
 		return int(value)
 
 	def encode_string(self, attribute_name, value):
+		"""
+		Looks up string and value in attributes hash and returns the label
+		encoded integer
+		"""
 		if value is None:
 			attr = self.get_attribute_info(attribute_name)
 			if 'default' in attr:
@@ -28,6 +46,10 @@ class Transformer:
 		return encoder.transform([value])[0]
 
 	def encode_dict(self, attribute_name, value_dict):
+		"""
+		Labels values in dicts of booleans (data has a lot of these)
+		"""
+
 		output = []
 
 		attr = self.get_attribute_info(attribute_name)
@@ -45,15 +67,6 @@ class Transformer:
 				output.append(encoding)
 
 			return output
-
-	def build_encoders(self):
-		encoders = {}
-		for attr in self.attributes:
-			if attr['type'] == 'string':
-				le = LabelEncoder()
-				le.fit(attr['values'])
-				encoders[attr['name']] = le
-		return encoders
 
 	def encode_attribute(self, attr, attr_value):
 		attr_type = self.get_attribute_type(attr)
@@ -75,7 +88,16 @@ class Transformer:
 			if attr_name == attr['name']:
 				return attr
 
+
+
 	def transform_instance(self, instance):
+		"""
+		Main Public method
+		Takes raw data as dict and returns an tuple of
+		(attributes, stars, rating)
+		the three are arrays ready to hand to sklearn, the first for inputs and
+		the second two for outputs
+		"""
 		attribute_dict = instance['attributes']
 		encoded_instance = []
 		for attr in self.attributes:
