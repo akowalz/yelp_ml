@@ -56,21 +56,24 @@ def get_all_attributes_and_values(outpath):
     values = {}
     with open("yelp_academic_dataset_business.json") as f:
         for line in f:
-            attrs = json.loads(line)["attributes"]
-            for attr, val in attrs.iteritems():
-                if attr in values.keys():
-                    values[attr]["count"] += 1
-                    if val not in values[attr]["values"] and not isinstance(val, dict):
-                        values[attr]["values"].append(val)
-                else:
-                    values[attr] = {
-                            "count" : 1,
-                            "values": []
-                            }
-                    if isinstance(val, dict):
-                        values[attr]["values"] = val.keys()
-                    else:
-                        values[attr]["values"].append(val)
+					data = json.loads(line)
+					attrs = data["attributes"]
+					cats = ["Food", "Restaurants"]
+					if in_category(data["categories"], cats):
+						for attr, val in attrs.iteritems():
+								if attr in values.keys():
+										values[attr]["count"] += 1
+										if val not in values[attr]["values"] and not isinstance(val, dict):
+												values[attr]["values"].append(val)
+								else:
+										values[attr] = {
+														"count" : 1,
+														"values": []
+														}
+										if isinstance(val, dict):
+												values[attr]["values"] = val.keys()
+										else:
+												values[attr]["values"].append(val)
 
 
     for k,v in values.iteritems():
@@ -79,4 +82,12 @@ def get_all_attributes_and_values(outpath):
     with open(outpath, "w") as f:
         pickle.dump(values, f)
 
-print get_toplevel_array_values("categories", "categories")
+def in_category(all_cats, subset):
+	all_cats = [cat.lower() for cat in all_cats]
+	subset = [cat.lower() for cat in subset]
+	for cat in subset:
+		if cat in all_cats:
+			return True
+
+
+get_all_attributes_and_values("food_attributes")
