@@ -110,8 +110,11 @@ class Transformer:
 		encoded_instance = []
 		enabled_attributes = self.enabled_attributes()
 		for attr in enabled_attributes:
-			if attr['name'] in attribute_dict.keys():
+			if attr['name'] in attribute_dict:
 				value = attribute_dict[attr['name']]
+			elif attr['name'] in instance:
+				# for top level keys
+				value = instance[attr['name']]
 			else:
 				value = None
 

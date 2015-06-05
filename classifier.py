@@ -11,6 +11,12 @@ from sys import argv
 
 attributes = [
 		{
+			'name':'city',
+			'type':'string',
+			'values': pickle.load(open("pickles/cities", 'r')),
+			'enabled': True
+		},
+		{
 			'name':'Alcohol',
 			'type':'string',
 			'values':['full_bar', 'none', 'beer_and_wine'],
@@ -141,7 +147,7 @@ def attribute_density_count(attributes):
 			instance = json.loads(line)
 			n_instance_attrs = 0
 			for attr in enabled_attrs:
-				if attr['name'] in instance['attributes']:
+				if attr['name'] in instance['attributes'] or attr['name'] in instance:
 					n_instance_attrs += 1
 
 			counts[n_instance_attrs] +=1
@@ -160,7 +166,7 @@ def get_dense_instances(attributes):
 				instance = json.loads(line)
 				n_instance_attrs = 0
 				for attr in enabled_attrs:
-					if attr['name'] in instance['attributes']:
+					if attr['name'] in instance['attributes'] or attr['name'] in instance:
 						n_instance_attrs += 1
 				if n_instance_attrs == n_attrs:
 					n_dense_instances += 1
