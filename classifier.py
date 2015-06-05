@@ -2,6 +2,7 @@ from sklearn import svm
 import json
 import pickle
 import transformer
+import pdb
 
 attributes = [
 		{
@@ -83,10 +84,14 @@ attributes = [
 			'name':'Good For Groups',
 			'type':'bool',
 			'default':True
+		}, 
+		{
+			'name':'Price Range',
+			'type':'int',
+			'default':2
 		}
 
 		# TODO:
-		# - price range : int,
 		# - city
 		# - category
     ]
@@ -99,12 +104,23 @@ stars = []
 ratings = []
 
 with open('yelp_academic_dataset_business.json', 'r') as f:
+	standard_length = 0
 	for line in f:
 		data = json.loads(line)
 		instance = t.transform_instance(data)
-		print t.transform_instance(data)
-		inputs.append(instance[0])
+		inputs += [instance[0]]
+		if len(instance[0]) < standard_length:
+			pdb.set_trace()
+			print instance
+		standard_length = len(instance[0])
+		print standard_length
 		stars.append(instance[1])
 		ratings.append(instance[2])
 
+print len(inputs) # sanity check
+print len(stars)
+
+classifier = svm.SVC()
+classifier.fit(inputs, stars)
+print classifier
 

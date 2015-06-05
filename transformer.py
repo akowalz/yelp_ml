@@ -23,7 +23,7 @@ class Transformer:
 
 	def encode_boolean(self, value, attribute_name=None):
 		""" turns True of False into 0 or 1, or default value if given """
-		if value is None:
+		if value is None or value == {}:
 			attr = self.get_attribute_info(attribute_name)
 			if 'default' in attr:
 				value = attr['default']
@@ -55,7 +55,7 @@ class Transformer:
 		attr = self.get_attribute_info(attribute_name)
 		attr_values = self.get_attribute_values(attribute_name)
 
-		if value_dict is None:
+		if value_dict is None or value_dict == {}:
 			return [0] * len(attr_values)
 		else:
 			for value in attr_values:
@@ -76,7 +76,7 @@ class Transformer:
 			return self.encode_boolean(attr_value, attr)
 		elif attr_type == "dict":
 			return self.encode_dict(attr, attr_value)
-		elif attr_type = "int":
+		elif attr_type == "int":
 			return attr_value
 
 	def get_attribute_type(self, attr_name):
