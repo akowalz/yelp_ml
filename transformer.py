@@ -56,7 +56,10 @@ class Transformer:
 		attr_values = self.get_attribute_values(attribute_name)
 
 		if value_dict is None or value_dict == {}:
-			return [0] * len(attr_values)
+			if 'defualt' in attr:
+				value_dict = attr['default']
+			else:
+				return [0] * len(attr_values)
 		else:
 			for value in attr_values:
 				if value in value_dict:
@@ -78,7 +81,7 @@ class Transformer:
 			return self.encode_dict(attr, attr_value)
 		elif attr_type == "int":
 			if attr_value == None:
-				return 2
+				return 2  # hack for bad data in the price ranges, right?
 			return attr_value
 
 	def get_attribute_type(self, attr_name):
@@ -92,7 +95,8 @@ class Transformer:
 			if attr_name == attr['name']:
 				return attr
 
-
+	def enabled_attributes(self):
+		return filter(lambda attr: attr['enabled'],self.attributes)
 
 	def transform_instance(self, instance):
 		"""
@@ -104,7 +108,8 @@ class Transformer:
 		"""
 		attribute_dict = instance['attributes']
 		encoded_instance = []
-		for attr in self.attributes:
+		enabled_attributes = self.enabled_attributes()
+		for attr in enabled_attributes:
 			if attr['name'] in attribute_dict.keys():
 				value = attribute_dict[attr['name']]
 			else:
@@ -118,4 +123,5 @@ class Transformer:
 			else:
 				encoded_instance.append(encoding)
 
+		print encoded_instance
 		return (encoded_instance, instance["stars"], instance["review_count"])

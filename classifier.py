@@ -7,91 +7,113 @@ import pdb
 from sklearn.externals import joblib
 import numpy as np
 
+from sys import argv
+
 attributes = [
 		{
 			'name':'Alcohol',
 			'type':'string',
 			'values':['full_bar', 'none', 'beer_and_wine'],
-			'default': 'none'
+			'default': 'none',
+			'enabled': True
 		},
 		{
 			'name':'Has TV',
 			'type':'bool',
-			'default': False
+			'default': False,
+			'enabled': True
 		},
 		{
 			'name':'Ambience',
 			'type':'dict',
 			'values': ['romantic', 'intimate', 'classy', 'hipster', 'divey', 'touristy', 'trendy', 'upscale', 'casual'],
-			'default': False
+			'default': {'romantic':False, 'intimate':False,'classy':False,
+						'hipster':False, 'divey':False, 'touristy':False,
+						'trendy':False, 'upscale':False, 'casual':True},
+			'enabled': True
 		},
 		{
 			'name':'Noise Level',
 			'type':'string',
 			'values':['average','loud','quiet','very_loud'],
-			'default':'average'
+			'default':'average',
+			'enabled': True
 		},
 		{
 			'name':'Good for Kids',
 			'type':'bool',
-			'default':True  # ehhhh
+			'default':True,  # ehhhh
+			'enabled':True
 		},
 		{
 			'name':'Attire',
 			'type':'string',
 			'values':['casual','dressy','formal'],
-			'default':'casual'
+			'default':'casual',
+			'enabled': True
 		},
 		{
 			'name':'Delivery',
 			'type':'bool',
-			'default': False
+			'default': False,
+			'enabled': True
 		},
 		{
 			'name':'Accepts Credit Cards',
 			'type':'bool',
-			'default':True
+			'default':True,
+			'enabled': True
 		},
 		{
 			'name':'Outdoor Seating',
 			'type':'bool',
-			'default':False
+			'default':False,
+			'enabled': True
 		},
 		{
 			'name':'Takes Reservations',
 			'type':'bool',
-			'default':False  # ????
+			'default':False,  # ????
+			'enabled': True
 		},
 		{
 			'name':'Waiter Service',
 			'type':'bool',
-			'default':False  # ????
+			'default':False,  # ????
+			'enabled': True
 		},
 		{
 			'name':'Wi-Fi',
 			'type':'string',
 			'values':['no','free','paid'],
-			'default':'no'
+			'default':'no',
+			'enabled': True
 		},
 		{
 			'name':'Parking',
 			'type':'dict',
-			'values':['garage', 'street', 'validated', 'lot', 'valet']
+			'values':['garage', 'street', 'validated', 'lot', 'valet'],
+			'default':{'garage':False,'street':True,'validated':False,'lot':False,'valet':False},
+			'enabled': True
 		},
 		{
 			'name':'Good For',
 			'type':'dict',
-			'values':['dessert', 'latenight', 'lunch', 'dinner','breakfast', 'brunch']
+			'values':['dessert', 'latenight', 'lunch', 'dinner','breakfast', 'brunch'],
+			'default':{'dessert':False,'latenight':False,'lunch':True,'dinner':True,'breakfast':False},
+			'enabled': True
 		},
 		{
 			'name':'Good For Groups',
 			'type':'bool',
-			'default':True
-		}, 
+			'default':True,
+			'enabled':True
+		},
 		{
 			'name':'Price Range',
 			'type':'int',
-			'default':2
+			'default':2,
+			'enabled':True
 		}
 
 		# TODO:
@@ -106,9 +128,9 @@ inputs = []
 stars = []
 ratings = []
 
-if not os.path.isfile('pickles/inputs'):
+if not os.path.isfile('pickles/inputs') or '--dry-run' in argv:
 	print('Existing transformed data not found. Transforming.')
-	with open('yelp_academic_dataset_business.json', 'r') as f:
+	with open('restaurant_listings.json', 'r') as f:
 		for line in f:
 			data = json.loads(line)
 			instance = t.transform_instance(data)
