@@ -1,4 +1,4 @@
-yelp_academic_dataset_business.json
+*.json
 *.swp
 *.pyc
-*.json
+*.zip

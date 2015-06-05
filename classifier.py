@@ -1,7 +1,11 @@
 from sklearn import svm
 import json
+import os.path
 import pickle
 import transformer
+import pdb
+from sklearn.externals import joblib
+import numpy as np
 
 attributes = [
 		{
@@ -83,10 +87,14 @@ attributes = [
 			'name':'Good For Groups',
 			'type':'bool',
 			'default':True
+		}, 
+		{
+			'name':'Price Range',
+			'type':'int',
+			'default':2
 		}
 
 		# TODO:
-		# - price range : int,
 		# - city
 		# - category
     ]
@@ -98,13 +106,58 @@ inputs = []
 stars = []
 ratings = []
 
-with open('yelp_academic_dataset_business.json', 'r') as f:
-	for line in f:
-		data = json.loads(line)
-		instance = t.transform_instance(data)
-		print t.transform_instance(data)
-		inputs.append(instance[0])
-		stars.append(instance[1])
-		ratings.append(instance[2])
+if not os.path.isfile('pickles/inputs'):
+	print('Existing transformed data not found. Transforming.')
+	with open('yelp_academic_dataset_business.json', 'r') as f:
+		for line in f:
+			data = json.loads(line)
+			instance = t.transform_instance(data)
+			inputs += [instance[0]]
+			for i in instance[0]:
+				try:
+					np.isnan(i)
+				except TypeError:
+					pdb.set_trace()
+			stars.append(instance[1])
+			ratings.append(instance[2])
 
+	with open('inputs', 'w') as f:
+		pickle.dump(inputs, f)
+
+	with open('stars', 'w') as f:
+		pickle.dump(stars, f)
+
+	with open('ratings', 'w') as f:
+		pickle.dump(ratings, f)
+else:
+	print('Loading transformed data from file.')
+	with open('pickles/inputs', 'r') as f:
+		inputs = pickle.load(f)
+	with open('pickles/ratings_inputs', 'r') as f:
+		ratings = pickle.load(f)
+	with open('pickles/star_inputs', 'r') as f:
+		stars = pickle.load(f)
+
+print('---Making Linear SVC---')
+lsvc = svm.LinearSVC()
+lsvc.fit(inputs, stars)
+
+correct_count = 0
+for i in range(len(inputs)):
+	correct_star = '{:.1f}'.format(stars[i])
+	predicted_star = '{:.1f}'.format(lsvc.predict(inputs[i])[0])
+	print 'Predicted {}, actual {}.'.format(predicted_star, correct_star)
+	if correct_star == predicted_star:
+		correct_count += 1
+
+print '{} correct out of {}, {}%'.format(correct_count, len(inputs), (float(correct_count)/float(len(inputs)))*100)
+
+
+# joblib.dump(lsvc, 'lsvc.pkl')
+
+print('---Making SVC---')
+svc = svm.SVC()
+svc.fit(inputs, stars)
+print(svc)
+joblib.dump(svc, 'svc.pkl')
 
