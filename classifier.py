@@ -1,5 +1,6 @@
 from sklearn import svm
 from sklearn.externals import joblib
+from sklearn import cross_validation
 from pprint import pprint
 import json
 import os.path
@@ -238,4 +239,95 @@ def classify():
 	print(svc)
 	joblib.dump(svc, 'svc.pkl')
 
-get_dense_instances(attributes)
+
+
+class Classifier:
+	def __init__(self, data_path, attributes, model=svm.SVC(),
+			ltype='Classification', output_type='stars',
+			input_path=None,output_path=None):
+		self.data_path = data_path #json data
+		self.ltype = ltype #learning type, classification vs. regression
+		self.attributes = attributes #attributes we're using from data
+
+		self.input_path = input_path # if we want to try fitting another algorithm without reloading the data
+		self.output_path = output_path
+		self.transformer = transformer.Transformer(self.attributes)
+
+		self.inputs = []
+		self.outputs = []
+
+		self.star_threshold = 3.5
+		self.output_type = output_type
+
+		self.model = model
+		self.transform_data()
+
+	def transform_data(self):
+
+		if self.input_path and self.output_path:
+			print "Loading transformed data from {} and {}".format(
+					self.output_path, self.output_path)
+			self.inputs = pickle.load(open(self.input_path,'r'))
+			self.outputs = pickle.load(open(self.output_path,'r'))
+		else:
+			print "Transforming instances in {}, output type is {}".format(self.data_path, self.output_type)
+			with open(self.data_path) as f:
+				for line in f:
+					inst, stars, reviews = self.transformer.transform_instance(json.loads(line))
+
+					self.inputs.append(inst)
+
+					if self.output_type == 'stars':
+						stars = self.transform_rating(stars)
+						self.outputs.append(stars)
+					else:
+						self.outputs.append(reviews)
+
+			print "Writing inputs to 'pickles/data/inputs_01.pkl'"
+
+			with open("pickles/data/inputs_01.pkl", 'w') as f:
+				pickle.dump(self.inputs, f)
+			print "Writing outputs to 'pickles/data/outputs_01.pkl'"
+			with open("pickles/data/outputs_01.pkl", 'w') as f:
+				pickle.dump(self.outputs, f)
+
+		print "Finished.  There are {} instances and {} outputs".format(len(self.inputs), len(self.outputs))
+
+	def transform_rating(self, stars):
+		if self.ltype == "Regression":
+			return stars
+		elif self.ltype == "Classification":
+			return stars > self.star_threshold
+		else:
+			raise InputError(self.ltype, "Invalid learning type")
+
+	def test_train_split(self,test_size=0.3):
+		print "Splitting data for testing/training"
+		self.x_train, self.x_test, self.y_train, self.y_test = cross_validation.train_test_split(
+				self.inputs, self.outputs, test_size=test_size, random_state=0)
+
+	def fit_model(self):
+		print "Fitting model"
+		self.model.fit(self.x_train, self.y_train)
+		print "Model fit"
+
+	def score(self):
+		scores = self.model.score(self.x_test, self.y_test)
+		print "Scores based on current test set: {}".format(scores)
+		return scores
+
+	def save_model(self, path):
+		print "Writing model to {}".format(path)
+		joblib.dump(self.model, path)
+
+	def load_model(self, path):
+		print "Loading model from {}".format(path)
+		joblib.load(path)
+
+
+c = Classifier('restaurant_listings_dense.json', attributes, svm.SVC(kernel='linear'),
+		input_path='pickles/data/inputs_01.pkl', output_path='pickles/data/outputs_01.pkl')
+c.test_train_split(test_size=0.3)
+c.load_model("pickles/models/svc_02.pkl_11.npy")
+
+c.score()
