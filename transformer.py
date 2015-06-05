@@ -77,6 +77,8 @@ class Transformer:
 		elif attr_type == "dict":
 			return self.encode_dict(attr, attr_value)
 		elif attr_type == "int":
+			if attr_value == None:
+				return 2
 			return attr_value
 
 	def get_attribute_type(self, attr_name):
