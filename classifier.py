@@ -1,4 +1,5 @@
 from sklearn import svm
+from sklearn import tree
 from sklearn.externals import joblib
 from sklearn import cross_validation
 from pprint import pprint
@@ -11,6 +12,12 @@ import numpy as np
 from sys import argv
 
 attributes = [
+		{
+			'name':'categories',
+			'type':'list',
+			'values': pickle.load(open("pickles/categories", "r")) + ["none"],
+			'enabled':True
+		},
 		{
 			'name':'city',
 			'type':'string',
@@ -28,7 +35,7 @@ attributes = [
 			'name':'Has TV',
 			'type':'bool',
 			'default': False,
-			'enabled': True
+			'enabled': False
 		},
 		{
 			'name':'Ambience',
@@ -37,27 +44,27 @@ attributes = [
 			'default': {'romantic':False, 'intimate':False,'classy':False,
 						'hipster':False, 'divey':False, 'touristy':False,
 						'trendy':False, 'upscale':False, 'casual':True},
-			'enabled': True
+			'enabled': False
 		},
 		{
 			'name':'Noise Level',
 			'type':'string',
 			'values':['average','loud','quiet','very_loud'],
 			'default':'average',
-			'enabled': True
+			'enabled': False
 		},
 		{
 			'name':'Good for Kids',
 			'type':'bool',
 			'default':True,  # ehhhh
-			'enabled':True
+			'enabled':False
 		},
 		{
 			'name':'Attire',
 			'type':'string',
 			'values':['casual','dressy','formal'],
 			'default':'casual',
-			'enabled': True
+			'enabled': False
 		},
 		{
 			'name':'Delivery',
@@ -75,13 +82,13 @@ attributes = [
 			'name':'Outdoor Seating',
 			'type':'bool',
 			'default':False,
-			'enabled': True
+			'enabled': False
 		},
 		{
 			'name':'Takes Reservations',
 			'type':'bool',
 			'default':False,  # ????
-			'enabled': True
+			'enabled': False
 		},
 		{
 			'name':'Waiter Service',
@@ -94,27 +101,27 @@ attributes = [
 			'type':'string',
 			'values':['no','free','paid'],
 			'default':'no',
-			'enabled': True
+			'enabled': False
 		},
 		{
 			'name':'Parking',
 			'type':'dict',
 			'values':['garage', 'street', 'validated', 'lot', 'valet'],
 			'default':{'garage':False,'street':True,'validated':False,'lot':False,'valet':False},
-			'enabled': True
+			'enabled': False
 		},
 		{
 			'name':'Good For',
 			'type':'dict',
 			'values':['dessert', 'latenight', 'lunch', 'dinner','breakfast', 'brunch'],
 			'default':{'dessert':False,'latenight':False,'lunch':True,'dinner':True,'breakfast':False},
-			'enabled': True
+			'enabled': False
 		},
 		{
 			'name':'Good For Groups',
 			'type':'bool',
 			'default':True,
-			'enabled':True
+			'enabled':False
 		},
 		{
 			'name':'Price Range',
@@ -122,10 +129,6 @@ attributes = [
 			'default':2,
 			'enabled':True
 		}
-
-		# TODO:
-		# - city
-		# - category
     ]
 
 def attribute_density_count(attributes):
@@ -244,13 +247,13 @@ def classify():
 class Classifier:
 	def __init__(self, data_path, attributes, model=svm.SVC(),
 			ltype='Classification', output_type='stars',
-			input_path=None,output_path=None):
+			load_data_path='', dry_run=False):
 		self.data_path = data_path #json data
 		self.ltype = ltype #learning type, classification vs. regression
 		self.attributes = attributes #attributes we're using from data
 
-		self.input_path = input_path # if we want to try fitting another algorithm without reloading the data
-		self.output_path = output_path
+		self.load_data_path = load_data_path
+		self.dry_run = dry_run
 		self.transformer = transformer.Transformer(self.attributes)
 
 		self.inputs = []
@@ -264,17 +267,16 @@ class Classifier:
 
 	def transform_data(self):
 
-		if self.input_path and self.output_path:
-			print "Loading transformed data from {} and {}".format(
-					self.output_path, self.output_path)
-			self.inputs = pickle.load(open(self.input_path,'r'))
-			self.outputs = pickle.load(open(self.output_path,'r'))
+		if self.load_data_path and not self.dry_run:
+			print "Loading transformed data from {}".format(self.load_data_path)
+			self.inputs, self.outputs = pickle.load(open(self.load_data_path,'r'))
 		else:
 			print "Transforming instances in {}, output type is {}".format(self.data_path, self.output_type)
 			with open(self.data_path) as f:
 				for line in f:
 					inst, stars, reviews = self.transformer.transform_instance(json.loads(line))
 
+					print inst
 					self.inputs.append(inst)
 
 					if self.output_type == 'stars':
@@ -283,13 +285,11 @@ class Classifier:
 					else:
 						self.outputs.append(reviews)
 
-			print "Writing inputs to 'pickles/data/inputs_01.pkl'"
+			write_path = "pickles/data/instances.pkl"
+			print "Writing transformed instances to ", write_path
 
-			with open("pickles/data/inputs_01.pkl", 'w') as f:
-				pickle.dump(self.inputs, f)
-			print "Writing outputs to 'pickles/data/outputs_01.pkl'"
-			with open("pickles/data/outputs_01.pkl", 'w') as f:
-				pickle.dump(self.outputs, f)
+			with open(write_path, 'w') as f:
+				pickle.dump((self.inputs, self.outputs), f)
 
 		print "Finished.  There are {} instances and {} outputs".format(len(self.inputs), len(self.outputs))
 
@@ -299,21 +299,34 @@ class Classifier:
 		elif self.ltype == "Classification":
 			return stars > self.star_threshold
 		else:
-			raise InputError(self.ltype, "Invalid learning type")
+			raise Exception(self.ltype, "Invalid learning type")
 
 	def test_train_split(self,test_size=0.3):
 		print "Splitting data for testing/training"
 		self.x_train, self.x_test, self.y_train, self.y_test = cross_validation.train_test_split(
 				self.inputs, self.outputs, test_size=test_size, random_state=0)
 
-	def fit_model(self):
-		print "Fitting model"
+	def fit_model_on_training_set(self):
+		print "Fitting model on {} samples".format(len(self.x_train))
 		self.model.fit(self.x_train, self.y_train)
+		print "Model fit"
+
+	def fit_model(self):
+		print "Fitting model on {} samples".format(len(self.inputs))
+		self.model.fit(self.inputs, self.outputs)
 		print "Model fit"
 
 	def score(self):
 		scores = self.model.score(self.x_test, self.y_test)
 		print "Scores based on current test set: {}".format(scores)
+		return scores
+
+	def cross_validate(self, n_folds=5):
+		print "Beginnning {}-fold cross validation".format(n_folds)
+		scores = cross_validation.cross_val_score(
+				self.model, self.inputs, self.outputs, cv=n_folds)
+		print "Finished cross validation, results:"
+		print scores
 		return scores
 
 	def save_model(self, path):
@@ -324,10 +337,11 @@ class Classifier:
 		print "Loading model from {}".format(path)
 		joblib.load(path)
 
+c = Classifier(
+		'restaurant_listings_dense.json',
+		attributes,
+		svm.SVC(kernel='rbf'),
+		load_data_path='pickles/data/instances.pkl',
+		dry_run=True)
 
-c = Classifier('restaurant_listings_dense.json', attributes, svm.SVC(kernel='linear'),
-		input_path='pickles/data/inputs_01.pkl', output_path='pickles/data/outputs_01.pkl')
-c.test_train_split(test_size=0.3)
-c.load_model("pickles/models/svc_02.pkl_11.npy")
-
-c.score()
+c.cross_validate()
