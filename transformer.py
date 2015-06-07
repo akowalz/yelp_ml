@@ -43,7 +43,14 @@ class Transformer:
 			else:
 				return -1
 		encoder = self.encoders[attribute_name]
-		return encoder.transform([value])[0]
+		normalized_label_value = self.normalize_label(encoder, value)
+		return normalized_label_value
+
+	def normalize_label(self, encoder, value):
+		highest_label_value = len(encoder.classes_)
+		label_value = encoder.transform([value])[0]
+
+		return float(label_value)/float(highest_label_value)
 
 	def encode_dict(self, attribute_name, value_dict):
 		"""
