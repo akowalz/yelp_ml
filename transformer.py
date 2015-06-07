@@ -10,12 +10,12 @@ class Transformer:
 
 	def build_encoders(self):
 		"""
-		Creates Label encoders based on possible values and keeps them in array
+		Creates Label encoders based on possible values and keeps them a dict
 		to use for later encoding
 		"""
 		encoders = {}
 		for attr in self.attributes:
-			if attr['type'] == 'string':
+			if attr['type'] == 'string' or attr['type'] == 'list':
 				le = LabelEncoder()
 				le.fit(attr['values'])
 				encoders[attr['name']] = le
@@ -45,6 +45,19 @@ class Transformer:
 		encoder = self.encoders[attribute_name]
 		normalized_label_value = self.normalize_label(encoder, value)
 		return normalized_label_value
+
+	def encode_list(self, attr, attr_values):
+		""" This is more like 'encode category' because that's the only list we
+		have..."""
+		ignored_cats = ["food", "restaurants", "restaurant"]
+		filtered_categories = filter(lambda c: c.lower() not in ignored_cats, attr_values)
+
+		if len(filtered_categories) == 0:
+			category = "none"
+		else:
+			category = filtered_categories[0]
+		return self.encode_string(attr, category)
+
 
 	def normalize_label(self, encoder, value):
 		highest_label_value = len(encoder.classes_)
@@ -89,7 +102,10 @@ class Transformer:
 		elif attr_type == "int":
 			if attr_value == None:
 				return 2  # hack for bad data in the price ranges, right?
-			return attr_value
+			else:
+				return attr_value
+		elif attr_type == "list":
+			return self.encode_list(attr, attr_value)
 
 	def get_attribute_type(self, attr_name):
 		return self.get_attribute_info(attr_name)['type']
@@ -133,5 +149,4 @@ class Transformer:
 			else:
 				encoded_instance.append(encoding)
 
-		print encoded_instance
 		return (encoded_instance, instance["stars"], instance["review_count"])
