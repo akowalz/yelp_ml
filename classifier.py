@@ -25,14 +25,14 @@ attributes = [
 			'name':'city',
 			'type':'string',
 			'values': pickle.load(open("pickles/cities", 'r')),
-			'enabled': True
+			'enabled': False
 		},
 		{
 			'name':'Alcohol',
 			'type':'string',
 			'values':['full_bar', 'none', 'beer_and_wine'],
 			'default': 'none',
-			'enabled': True
+			'enabled': False
 		},
 		{
 			'name':'Has TV',
@@ -91,7 +91,7 @@ attributes = [
 			'name':'Takes Reservations',
 			'type':'bool',
 			'default':False,  # ????
-			'enabled': True
+			'enabled': False
 		},
 		{
 			'name':'Waiter Service',
@@ -348,7 +348,7 @@ class Classifier:
 		zero_class_scores = self.zero_classifier()
 		print "The zero classifier would predict with {} accuracy".format(zero_class_scores)
 
-		return scores
+		return sum(scores)/float(len(scores))
 
 	def save_model(self, path):
 		print "Writing model to {}".format(path)
@@ -374,7 +374,7 @@ class Classifier:
 	def choose_params(self):
 		param_grid = [
 				  {'C': [1, 10, 100, 1000], 'kernel': ['linear']},
-					  {'C': [1, 10, 100, 1000], 'gamma': [0.001, 0.0001], 'kernel': ['rbf']},
+					{'C': [1, 10, 100, 1000], 'gamma': [0.001, 0.0001], 'kernel': ['rbf']},
 						 ]
 		self.model = grid_search.GridSearchCV(self.model, param_grid)
 		joblib.dump(self.model, 'gs_model.pkl')
@@ -411,8 +411,46 @@ class Classifier:
 c = Classifier(
 		'restaurant_listings.json',
 		attributes,
-		svm.SVC(kernel='linear', C=1, gamma=0.0001),
+		tree.DecisionTreeClassifier(),
 		load_data_path='pickles/data/instances.pkl',
 		dry_run=False)
 
 c.cross_validate(5)
+
+def find_best_attributes(attributes):
+	print "disabling all attributes"
+	for attr in attributes:
+		attr['enabled'] = False
+
+	best_score = float('-inf')
+
+	for attr in attributes:
+		print "Trying ", attr['name']
+		attr['enabled'] = True
+
+		c = Classifier(
+				'restaurant_listings.json',
+				attributes,
+				tree.DecisionTreeClassifier(),
+				load_data_path='pickles/data/instances.pkl',
+				dry_run=True)
+
+		zero_score = c.zero_classifier()
+		cv_score = c.cross_validate(20)
+
+		score = cv_score - zero_score
+		if score > best_score:
+			print "Enabling {} seems to help...".format(attr['name'])
+			best_score = score
+		else:
+			print "Enabling {} does not help".format(attr['name'])
+			attr['enabled'] = False
+
+	print "Final contenders:"
+	for attr in attributes:
+		if attr['enabled']:
+			print attr['name']
+
+	return attributes
+
+#find_best_attributes(attributes)
