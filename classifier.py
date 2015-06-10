@@ -13,6 +13,7 @@ import transformer
 import pdb
 import numpy as np
 from sys import argv
+from random import shuffle
 
 attributes = [
 		{
@@ -424,6 +425,7 @@ def find_best_attributes(attributes):
 
 	best_score = float('-inf')
 
+	shuffle(attributes)
 	for attr in attributes:
 		print "Trying ", attr['name']
 		attr['enabled'] = True
@@ -436,14 +438,14 @@ def find_best_attributes(attributes):
 				dry_run=True)
 
 		zero_score = c.zero_classifier()
-		cv_score = c.cross_validate(20)
+		cv_score = c.cross_validate(10)
 
 		score = cv_score - zero_score
 		if score > best_score:
-			print "Enabling {} seems to help...".format(attr['name'])
+			print "{} HELPS >>>>>>".format(attr['name'])
 			best_score = score
 		else:
-			print "Enabling {} does not help".format(attr['name'])
+			print "{} DOES NOT HELP <<<<<<".format(attr['name'])
 			attr['enabled'] = False
 
 	print "Final contenders:"
@@ -453,4 +455,4 @@ def find_best_attributes(attributes):
 
 	return attributes
 
-#find_best_attributes(attributes)
+find_best_attributes(attributes)
