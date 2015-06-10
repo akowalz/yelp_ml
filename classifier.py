@@ -32,7 +32,7 @@ attributes = [
 			'type':'string',
 			'values':['full_bar', 'none', 'beer_and_wine'],
 			'default': 'none',
-			'enabled': True
+			'enabled': False
 		},
 		{
 			'name':'Has TV',
@@ -73,13 +73,13 @@ attributes = [
 			'name':'Delivery',
 			'type':'bool',
 			'default': False,
-			'enabled': True
+			'enabled': False
 		},
 		{
 			'name':'Accepts Credit Cards',
 			'type':'bool',
 			'default':True,
-			'enabled': True
+			'enabled': False
 		},
 		{
 			'name':'Outdoor Seating',
@@ -275,11 +275,18 @@ class Classifier:
 			self.inputs, self.outputs = pickle.load(open(self.load_data_path,'r'))
 		else:
 			print "Transforming instances in {}, output type is {}".format(self.data_path, self.output_type)
+			print "Using attributes:"
+			for attr in self.attributes:
+				if attr['enabled']:
+					print attr['name']
+
 			with open(self.data_path) as f:
 				for line in f:
-					inst, stars, reviews = self.transformer.transform_instance(json.loads(line))
+					raw_instance = json.loads(line)
+					if not self.instance_has_all_enabled_attributes(raw_instance):
+						continue
+					inst, stars, reviews = self.transformer.transform_instance(raw_instance)
 
-					print inst
 					self.inputs.append(inst)
 
 					if self.output_type == 'stars':
@@ -295,6 +302,14 @@ class Classifier:
 				pickle.dump((self.inputs, self.outputs), f)
 
 		print "Finished.  There are {} instances and {} outputs".format(len(self.inputs), len(self.outputs))
+
+	def instance_has_all_enabled_attributes(self, instance):
+		for attr in self.attributes:
+			if attr['enabled']:
+				if not attr['name'] in instance and not attr['name'] in instance['attributes']:
+					print "Skipping because lacking {}".format(attr['name'])
+					return False
+		return True
 
 	def transform_rating(self, stars):
 		if self.ltype == "Regression":
@@ -351,7 +366,7 @@ class Classifier:
 				pos_class += 1
 			else:
 				neg_class += 1
-		
+
 		return pos_class/len(self.outputs)
 
 	def choose_params(self):
@@ -364,41 +379,40 @@ class Classifier:
 		self.cross_validate()
 
 	def make_graph(self):
-    plt.figure()
-    plt.title(title)
-    if ylim is not None:
-        plt.ylim(*ylim)
-    plt.xlabel("Training examples")
-    plt.ylabel("Score")
-    train_sizes, train_scores, test_scores = learning_curve(
-        estimator, X, y, cv=cv, n_jobs=n_jobs, train_sizes=train_sizes)
-    train_scores_mean = np.mean(train_scores, axis=1)
-    train_scores_std = np.std(train_scores, axis=1)
-    test_scores_mean = np.mean(test_scores, axis=1)
-    test_scores_std = np.std(test_scores, axis=1)
-    plt.grid()
+		plt.figure()
+		plt.title(title)
+		if ylim is not None:
+			plt.ylim(*ylim)
+		plt.xlabel("Training examples")
+		plt.ylabel("Score")
+		train_sizes, train_scores, test_scores = learning_curve(
+			estimator, X, y, cv=cv, n_jobs=n_jobs, train_sizes=train_sizes)
+		train_scores_mean = np.mean(train_scores, axis=1)
+		train_scores_std = np.std(train_scores, axis=1)
+		test_scores_mean = np.mean(test_scores, axis=1)
+		test_scores_std = np.std(test_scores, axis=1)
+		plt.grid()
 
-    plt.fill_between(train_sizes, train_scores_mean - train_scores_std,
-                     train_scores_mean + train_scores_std, alpha=0.1,
-                     color="r")
-    plt.fill_between(train_sizes, test_scores_mean - test_scores_std,
-                     test_scores_mean + test_scores_std, alpha=0.1, color="g")
-    plt.plot(train_sizes, train_scores_mean, 'o-', color="r",
-             label="Training score")
-    plt.plot(train_sizes, test_scores_mean, 'o-', color="g",
-             label="Cross-validation score")
+		plt.fill_between(train_sizes, train_scores_mean - train_scores_std,
+						 train_scores_mean + train_scores_std, alpha=0.1,
+						 color="r")
+		plt.fill_between(train_sizes, test_scores_mean - test_scores_std,
+						 test_scores_mean + test_scores_std, alpha=0.1, color="g")
+		plt.plot(train_sizes, train_scores_mean, 'o-', color="r",
+				 label="Training score")
+		plt.plot(train_sizes, test_scores_mean, 'o-', color="g",
+				 label="Cross-validation score")
 
-    plt.legend(loc="best")
-    return plt
+		plt.legend(loc="best")
+		return plt
 
-cClassifier(
-		'restaurant_listings_dense.json',
+c = Classifier(
+		'restaurant_listings.json',
 		attributes,
-		svm.SVC(kernel='rbf'),
+		tree.DecisionTreeClassifier(),
 		load_data_path='pickles/data/instances.pkl',
 		dry_run=False)
 
 c.choose_params()
 
 c.cross_validate(5)
-

@@ -121,6 +121,7 @@ class Transformer:
 	def enabled_attributes(self):
 		return filter(lambda attr: attr['enabled'],self.attributes)
 
+
 	def transform_instance(self, instance):
 		"""
 		Main Public method
