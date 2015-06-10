@@ -1,7 +1,7 @@
 from sklearn import svm
-import matplotlib.pyplot as plt
+#import matplotlib.pyplot as plt
 from sklearn import grid_search
-from sklearn.naive_bayes import GaussianNB
+from sklearn.naive_bayes import GaussianNB,MultinomialNB
 from sklearn import tree
 from sklearn.externals import joblib
 from sklearn import cross_validation
@@ -32,7 +32,7 @@ attributes = [
 			'type':'string',
 			'values':['full_bar', 'none', 'beer_and_wine'],
 			'default': 'none',
-			'enabled': False
+			'enabled': True
 		},
 		{
 			'name':'Has TV',
@@ -47,7 +47,7 @@ attributes = [
 			'default': {'romantic':False, 'intimate':False,'classy':False,
 						'hipster':False, 'divey':False, 'touristy':False,
 						'trendy':False, 'upscale':False, 'casual':True},
-			'enabled': True
+			'enabled': False
 		},
 		{
 			'name':'Noise Level',
@@ -79,7 +79,7 @@ attributes = [
 			'name':'Accepts Credit Cards',
 			'type':'bool',
 			'default':True,
-			'enabled': False
+			'enabled': True
 		},
 		{
 			'name':'Outdoor Seating',
@@ -91,20 +91,20 @@ attributes = [
 			'name':'Takes Reservations',
 			'type':'bool',
 			'default':False,  # ????
-			'enabled': False
+			'enabled': True
 		},
 		{
 			'name':'Waiter Service',
 			'type':'bool',
-			'default':False,  # ????
-			'enabled': False
+			'default':True,  # ????
+			'enabled': True
 		},
 		{
 			'name':'Wi-Fi',
 			'type':'string',
 			'values':['no','free','paid'],
 			'default':'no',
-			'enabled': False
+			'enabled': True
 		},
 		{
 			'name':'Parking',
@@ -118,7 +118,7 @@ attributes = [
 			'type':'dict',
 			'values':['dessert', 'latenight', 'lunch', 'dinner','breakfast', 'brunch'],
 			'default':{'dessert':False,'latenight':False,'lunch':True,'dinner':True,'breakfast':False},
-			'enabled': True
+			'enabled': False
 		},
 		{
 			'name':'Good For Groups',
@@ -307,7 +307,6 @@ class Classifier:
 		for attr in self.attributes:
 			if attr['enabled']:
 				if not attr['name'] in instance and not attr['name'] in instance['attributes']:
-					print "Skipping because lacking {}".format(attr['name'])
 					return False
 		return True
 
@@ -345,6 +344,7 @@ class Classifier:
 				self.model, self.inputs, self.outputs, cv=n_folds)
 		print "Finished cross validation, results:"
 		print scores
+		print "Average accuracy: {}".format(sum(scores)/float(len(scores)))
 		zero_class_scores = self.zero_classifier()
 		print "The zero classifier would predict with {} accuracy".format(zero_class_scores)
 
@@ -361,13 +361,15 @@ class Classifier:
 	def zero_classifier(self):
 		pos_class = 0
 		neg_class = 0
-		for i in range(len(self.outputs)):
-			if self.outputs[i] > self.star_threshold:
+		for output in self.outputs:
+			if output:
 				pos_class += 1
 			else:
 				neg_class += 1
 
-		return pos_class/len(self.outputs)
+		more_probable_class = pos_class if (pos_class > neg_class) else neg_class
+
+		return more_probable_class/float(len(self.outputs))
 
 	def choose_params(self):
 		param_grid = [
@@ -409,10 +411,8 @@ class Classifier:
 c = Classifier(
 		'restaurant_listings.json',
 		attributes,
-		tree.DecisionTreeClassifier(),
+		svm.SVC(kernel='linear', C=1, gamma=0.0001),
 		load_data_path='pickles/data/instances.pkl',
 		dry_run=False)
-
-c.choose_params()
 
 c.cross_validate(5)
