@@ -1,4 +1,7 @@
 from sklearn import svm
+import matplotlib.pyplot as plt
+from sklearn import grid_search
+from sklearn.naive_bayes import GaussianNB
 from sklearn import tree
 from sklearn.externals import joblib
 from sklearn import cross_validation
@@ -44,7 +47,7 @@ attributes = [
 			'default': {'romantic':False, 'intimate':False,'classy':False,
 						'hipster':False, 'divey':False, 'touristy':False,
 						'trendy':False, 'upscale':False, 'casual':True},
-			'enabled': False
+			'enabled': True
 		},
 		{
 			'name':'Noise Level',
@@ -94,7 +97,7 @@ attributes = [
 			'name':'Waiter Service',
 			'type':'bool',
 			'default':False,  # ????
-			'enabled': True
+			'enabled': False
 		},
 		{
 			'name':'Wi-Fi',
@@ -115,7 +118,7 @@ attributes = [
 			'type':'dict',
 			'values':['dessert', 'latenight', 'lunch', 'dinner','breakfast', 'brunch'],
 			'default':{'dessert':False,'latenight':False,'lunch':True,'dinner':True,'breakfast':False},
-			'enabled': False
+			'enabled': True
 		},
 		{
 			'name':'Good For Groups',
@@ -219,28 +222,28 @@ def classify():
 		with open('pickles/star_inputs', 'r') as f:
 			stars = pickle.load(f)
 
-	print('---Making Linear SVC---')
-	lsvc = svm.LinearSVC()
-	lsvc.fit(inputs, stars)
+	# print('---Making Linear SVC---')
+	# lsvc = svm.LinearSVC()
+	# lsvc.fit(inputs, stars)
 
-	correct_count = 0
-	for i in range(len(inputs)):
-		correct_star = '{:.1f}'.format(stars[i])
-		predicted_star = '{:.1f}'.format(lsvc.predict(inputs[i])[0])
-		print 'Predicted {}, actual {}.'.format(predicted_star, correct_star)
-		if correct_star == predicted_star:
-			correct_count += 1
+	# correct_count = 0
+	# for i in range(len(inputs)):
+	# 	correct_star = '{:.1f}'.format(stars[i])
+	# 	predicted_star = '{:.1f}'.format(lsvc.predict(inputs[i])[0])
+	# 	print 'Predicted {}, actual {}.'.format(predicted_star, correct_star)
+	# 	if correct_star == predicted_star:
+	# 		correct_count += 1
 
-	print '{} correct out of {}, {}%'.format(correct_count, len(inputs), (float(correct_count)/float(len(inputs)))*100)
+	# print '{} correct out of {}, {}%'.format(correct_count, len(inputs), (float(correct_count)/float(len(inputs)))*100)
 
 
 # joblib.dump(lsvc, 'lsvc.pkl')
 
-	print('---Making SVC---')
-	svc = svm.SVC()
-	svc.fit(inputs, stars)
-	print(svc)
-	joblib.dump(svc, 'svc.pkl')
+	# print('---Making SVC---')
+	# svc = svm.SVC()
+	# svc.fit(inputs, stars)
+	# print(svc)
+	# joblib.dump(svc, 'svc.pkl')
 
 
 
@@ -327,6 +330,9 @@ class Classifier:
 				self.model, self.inputs, self.outputs, cv=n_folds)
 		print "Finished cross validation, results:"
 		print scores
+		zero_class_scores = self.zero_classifier()
+		print "The zero classifier would predict with {} accuracy".format(zero_class_scores)
+
 		return scores
 
 	def save_model(self, path):
@@ -337,11 +343,62 @@ class Classifier:
 		print "Loading model from {}".format(path)
 		joblib.load(path)
 
-c = Classifier(
+	def zero_classifier(self):
+		pos_class = 0
+		neg_class = 0
+		for i in range(len(self.outputs)):
+			if self.outputs[i] > self.star_threshold:
+				pos_class += 1
+			else:
+				neg_class += 1
+		
+		return pos_class/len(self.outputs)
+
+	def choose_params(self):
+		param_grid = [
+				  {'C': [1, 10, 100, 1000], 'kernel': ['linear']},
+					  {'C': [1, 10, 100, 1000], 'gamma': [0.001, 0.0001], 'kernel': ['rbf']},
+						 ]
+		self.model = grid_search.GridSearchCV(self.model, param_grid)
+		joblib.dump(self.model, 'gs_model.pkl')
+		self.cross_validate()
+
+	def make_graph(self):
+    plt.figure()
+    plt.title(title)
+    if ylim is not None:
+        plt.ylim(*ylim)
+    plt.xlabel("Training examples")
+    plt.ylabel("Score")
+    train_sizes, train_scores, test_scores = learning_curve(
+        estimator, X, y, cv=cv, n_jobs=n_jobs, train_sizes=train_sizes)
+    train_scores_mean = np.mean(train_scores, axis=1)
+    train_scores_std = np.std(train_scores, axis=1)
+    test_scores_mean = np.mean(test_scores, axis=1)
+    test_scores_std = np.std(test_scores, axis=1)
+    plt.grid()
+
+    plt.fill_between(train_sizes, train_scores_mean - train_scores_std,
+                     train_scores_mean + train_scores_std, alpha=0.1,
+                     color="r")
+    plt.fill_between(train_sizes, test_scores_mean - test_scores_std,
+                     test_scores_mean + test_scores_std, alpha=0.1, color="g")
+    plt.plot(train_sizes, train_scores_mean, 'o-', color="r",
+             label="Training score")
+    plt.plot(train_sizes, test_scores_mean, 'o-', color="g",
+             label="Cross-validation score")
+
+    plt.legend(loc="best")
+    return plt
+
+cClassifier(
 		'restaurant_listings_dense.json',
 		attributes,
 		svm.SVC(kernel='rbf'),
 		load_data_path='pickles/data/instances.pkl',
-		dry_run=True)
+		dry_run=False)
 
-c.cross_validate()
+c.choose_params()
+
+c.cross_validate(5)
+
