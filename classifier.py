@@ -1,5 +1,7 @@
 from sklearn import svm
 #import matplotlib.pyplot as plt
+import matplotlib.pyplot as plt
+from sklearn.learning_curve import learning_curve
 from sklearn import grid_search
 from sklearn.naive_bayes import GaussianNB,MultinomialNB
 from sklearn import tree
@@ -79,7 +81,7 @@ attributes = [
 			'name':'Accepts Credit Cards',
 			'type':'bool',
 			'default':True,
-			'enabled': True
+			'enabled': False
 		},
 		{
 			'name':'Outdoor Seating',
@@ -373,22 +375,22 @@ class Classifier:
 
 	def choose_params(self):
 		param_grid = [
-				  {'C': [1, 10, 100, 1000], 'kernel': ['linear']},
-					{'C': [1, 10, 100, 1000], 'gamma': [0.001, 0.0001], 'kernel': ['rbf']},
+					  {'C': [.01, .1], 'gamma': [0.001, 0.0001], 'kernel': ['rbf']},
 						 ]
-		self.model = grid_search.GridSearchCV(self.model, param_grid)
-		joblib.dump(self.model, 'gs_model.pkl')
-		self.cross_validate()
+		clf = grid_search.GridSearchCV(self.model, param_grid)
+		clf.fit(self.inputs, self.outputs)
+		print "Grid Search fit estimator scored a {}".format(clf.score(self.inputs, self.outputs))
+		best_estimator = clf.best_estimator_
+		self.model = best_estimator
+		joblib.dump(best_estimator, 'gs_best_estimator.pkl')
 
 	def make_graph(self):
 		plt.figure()
 		plt.title(title)
-		if ylim is not None:
-			plt.ylim(*ylim)
 		plt.xlabel("Training examples")
 		plt.ylabel("Score")
 		train_sizes, train_scores, test_scores = learning_curve(
-			estimator, X, y, cv=cv, n_jobs=n_jobs, train_sizes=train_sizes)
+			 self.model, self.inputs, self.outputs, cv=cv, n_jobs=n_jobs, train_sizes=train_sizes)
 		train_scores_mean = np.mean(train_scores, axis=1)
 		train_scores_std = np.std(train_scores, axis=1)
 		test_scores_mean = np.mean(test_scores, axis=1)
@@ -396,26 +398,31 @@ class Classifier:
 		plt.grid()
 
 		plt.fill_between(train_sizes, train_scores_mean - train_scores_std,
-						 train_scores_mean + train_scores_std, alpha=0.1,
-						 color="r")
+										train_scores_mean + train_scores_std, alpha=0.1,
+										color="r")
 		plt.fill_between(train_sizes, test_scores_mean - test_scores_std,
-						 test_scores_mean + test_scores_std, alpha=0.1, color="g")
+										test_scores_mean + test_scores_std, alpha=0.1, color="g")
 		plt.plot(train_sizes, train_scores_mean, 'o-', color="r",
-				 label="Training score")
+						label="Training score")
 		plt.plot(train_sizes, test_scores_mean, 'o-', color="g",
-				 label="Cross-validation score")
+						label="Cross-validation score")
 
 		plt.legend(loc="best")
 		return plt
 
-c = Classifier(
-		'restaurant_listings.json',
-		attributes,
-		tree.DecisionTreeClassifier(),
-		load_data_path='pickles/data/instances.pkl',
-		dry_run=False)
+if __name__ == '__main__':
+	# best_estimator = joblib.load('gs_best_estimator.pkl')
 
-c.cross_validate(5)
+	c = Classifier(
+			'restaurant_listings.json',
+			attributes,
+			tree.DecisionTreeClassifier(),
+			load_data_path='',
+			dry_run=True)
+
+	c.choose_params()
+
+	c.cross_validate(5)
 
 def find_best_attributes(attributes):
 	print "disabling all attributes"
