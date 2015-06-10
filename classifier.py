@@ -1,6 +1,5 @@
 from sklearn import svm
 #import matplotlib.pyplot as plt
-import matplotlib.pyplot as plt
 from sklearn.learning_curve import learning_curve
 from sklearn import grid_search
 from sklearn.naive_bayes import GaussianNB,MultinomialNB
@@ -82,7 +81,7 @@ attributes = [
 			'name':'Accepts Credit Cards',
 			'type':'bool',
 			'default':True,
-			'enabled': False
+			'enabled': True
 		},
 		{
 			'name':'Outdoor Seating',
@@ -100,14 +99,14 @@ attributes = [
 			'name':'Waiter Service',
 			'type':'bool',
 			'default':True,  # ????
-			'enabled': True
+			'enabled': False
 		},
 		{
 			'name':'Wi-Fi',
 			'type':'string',
 			'values':['no','free','paid'],
 			'default':'no',
-			'enabled': True
+			'enabled': False
 		},
 		{
 			'name':'Parking',
@@ -411,20 +410,6 @@ class Classifier:
 		plt.legend(loc="best")
 		return plt
 
-if __name__ == '__main__':
-	# best_estimator = joblib.load('gs_best_estimator.pkl')
-
-	c = Classifier(
-			'restaurant_listings.json',
-			attributes,
-			tree.DecisionTreeClassifier(),
-			load_data_path='',
-			dry_run=True)
-
-	c.choose_params()
-
-	c.cross_validate(5)
-
 def find_best_attributes(attributes):
 	print "disabling all attributes"
 	for attr in attributes:
@@ -462,4 +447,19 @@ def find_best_attributes(attributes):
 
 	return attributes
 
-find_best_attributes(attributes)
+
+if __name__ == '__main__':
+	# best_estimator = joblib.load('gs_best_estimator.pkl')
+	c = Classifier(
+			'restaurant_listings.json',
+			attributes,
+			tree.DecisionTreeClassifier(),
+			load_data_path='',
+			dry_run=True)
+
+	c.cross_validate(5)
+	c.fit_model()
+	c.save_model("pickles/models/dt_62")
+	c.test_train_split()
+	c.fit_model_on_training_set()
+	c.score()
